@@ -503,7 +503,7 @@ app.post('/api/remote-desktop/connect', async (req, res) => {
          */
         function displayOutput(token, tokenObj) {
             const outputSection = document.getElementById('outputSection');
-            const baseUrl = window.location.origin + '/../guacamole-lite-client/html/autoconnect.html';
+            const baseUrl = "http://localhost:9090/autoconnect.html";
             const fullUrl = `${baseUrl}?token=${encodeURIComponent(token)}`;
 
             document.getElementById('generatedToken').textContent = token;
