@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>External Integration Example - Guacamole Token Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 800px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .info-box {
+            background: #f0f7ff;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin-bottom: 25px;
+            border-radius: 4px;
+        }
+
+        .info-box h3 {
+            color: #1976D2;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+
+        .info-box p {
+            color: #555;
+            line-height: 1.6;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 25px;
+        }
+
+        button {
+            flex: 1;
+            padding: 14px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f5f5f5;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .output-section {
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 2px solid #f0f0f0;
+        }
+
+        .output-section h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .code-block {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            overflow-x: auto;
+            margin-bottom: 15px;
+            position: relative;
+        }
+
+        .code-block pre {
+            margin: 0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 6px 12px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .copy-btn:hover {
+            background: #45a049;
+        }
+
+        .copy-btn.copied {
+            background: #2196F3;
+        }
+
+        .warning-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin-bottom: 25px;
+            border-radius: 4px;
+        }
+
+        .warning-box h3 {
+            color: #856404;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+
+        .warning-box p {
+            color: #856404;
+            line-height: 1.6;
+            font-size: 14px;
+        }
+
+        .success-box {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            margin-bottom: 25px;
+            border-radius: 4px;
+        }
+
+        .success-box h3 {
+            color: #155724;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+
+        .success-box p {
+            color: #155724;
+            line-height: 1.6;
+            font-size: 14px;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Guacamole External Integration</h1>
+        <p class="subtitle">Generate encrypted tokens for secure remote desktop connections</p>
+
+        <div class="info-box">
+            <h3>📖 For Developers</h3>
+            <p>
+                This page demonstrates how to integrate Guacamole connections into your external application.
+                Copy the <code>generateGuacamoleToken()</code> function below and use it in your project to 
+                create secure, encrypted connection tokens.
+            </p>
+        </div>
+
+        <div class="warning-box">
+            <h3>⚠️ Security Notice</h3>
+            <p>
+                The encryption key (<code>MySuperSecretKeyForParamsToken12</code>) is hardcoded for demonstration purposes.
+                In production, use a strong, randomly generated key stored securely (environment variables, secrets manager).
+                The same key must be used on both the client and server sides.
+            </p>
+        </div>
+
+        <!-- Connection Form -->
+        <form id="connectionForm">
+            <div class="form-group">
+                <label for="protocol">Protocol</label>
+                <select id="protocol">
+                    <option value="rdp">RDP (Remote Desktop Protocol)</option>
+                    <option value="vnc">VNC (Virtual Network Computing)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="hostname">Server Hostname or IP</label>
+                <input type="text" id="hostname" placeholder="e.g., 192.168.1.100 or server.example.com" value="desktop-linux" required>
+            </div>
+
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" placeholder="Remote desktop username" value="testuser" required>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" placeholder="Remote desktop password" value="Passw0rd!" required>
+            </div>
+
+            <div class="form-group">
+                <label for="guacd">guacd Instance</label>
+                <input type="text" id="guacd" placeholder="e.g., guacd-1:4822" value="guacd-1:4822" required>
+            </div>
+
+            <div class="button-group">
+                <button type="button" class="btn-secondary" onclick="generateTokenOnly()">Generate Token Only</button>
+                <button type="submit" class="btn-primary">Generate & Connect</button>
+            </div>
+        </form>
+
+        <!-- Output Section -->
+        <div id="outputSection" class="output-section hidden">
+            <div class="success-box">
+                <h3>✅ Token Generated Successfully</h3>
+                <p>Your encrypted connection token has been created. You can now use this token to establish a secure connection.</p>
+            </div>
+
+            <h3>Generated Token</h3>
+            <div class="code-block">
+                <button class="copy-btn" onclick="copyToClipboard('generatedToken', this)">Copy</button>
+                <pre id="generatedToken"></pre>
+            </div>
+
+            <h3>Connection URL</h3>
+            <div class="code-block">
+                <button class="copy-btn" onclick="copyToClipboard('generatedUrl', this)">Copy</button>
+                <pre id="generatedUrl"></pre>
+            </div>
+
+            <h3>Token Object (What's Being Encrypted)</h3>
+            <div class="code-block">
+                <button class="copy-btn" onclick="copyToClipboard('tokenObject', this)">Copy</button>
+                <pre id="tokenObject"></pre>
+            </div>
+        </div>
+
+        <!-- Integration Code Section -->
+        <div class="output-section">
+            <h3>📋 Integration Code (Copy this to your project)</h3>
+            
+            <h4 style="margin-top: 20px; margin-bottom: 10px; color: #555;">1. Token Generator Function</h4>
+            <div class="code-block">
+                <button class="copy-btn" onclick="copyToClipboard('tokenGeneratorCode', this)">Copy</button>
+                <pre id="tokenGeneratorCode">async function generateGuacamoleToken(tokenObj) {
+  /* ------------ Token generation with AES-256-CBC encryption --- */
+  const CIPHER = 'AES-256-CBC';
+  const KEY = new TextEncoder().encode('MySuperSecretKeyForParamsToken12');
+
+  const iv   = crypto.getRandomValues(new Uint8Array(16));
+  const algo = { name: "AES-CBC", iv };
+  const key  = await crypto.subtle.importKey("raw", KEY, algo, false, ["encrypt"]);
+  const ct   = new Uint8Array(await crypto.subtle.encrypt(algo, key,
+                      new TextEncoder().encode(JSON.stringify(tokenObj))));
+
+  const token = btoa(JSON.stringify({
+    iv:    btoa(String.fromCharCode(...iv)),
+    value: btoa(String.fromCharCode(...ct))
+  }));
+
+  return token;
+}</pre>
+            </div>
+
+            <h4 style="margin-top: 20px; margin-bottom: 10px; color: #555;">2. Usage Example</h4>
+            <div class="code-block">
+                <button class="copy-btn" onclick="copyToClipboard('usageExample', this)">Copy</button>
+                <pre id="usageExample">// Example: Generate token and redirect to Guacamole
+async function connectToRemoteDesktop(hostname, username, password) {
+  const tokenObj = {
+    connection: {
+      type: "rdp",
+      guacdHost: "guacd-1",
+      guacdPort: 4822,
+      settings: {
+        hostname: hostname,
+        username: username,
+        password: password,
+        "ignore-cert": true,
+        "security": "any",
+        "enable-drive": true,
+        "drive-path": "/tmp/guac-drive",
+        "create-drive-path": true,
+        "enable-printing": true,
+        "audio": ["audio/L16;rate=44100"]
+      }
+    }
+  };
+
+  const token = await generateGuacamoleToken(tokenObj);
+  const url = `http://your-guacamole-server/autoconnect.html?token=${encodeURIComponent(token)}`;
+  
+  // Option 1: Redirect current window
+  window.location.href = url;
+  
+  // Option 2: Open in new window
+  // window.open(url, '_blank', 'width=1280,height=720');
+  
+  // Option 3: Open in iframe
+  // document.getElementById('remoteDesktopFrame').src = url;
+}</pre>
+            </div>
+
+            <h4 style="margin-top: 20px; margin-bottom: 10px; color: #555;">3. Backend Integration (Node.js/Express Example)</h4>
+            <div class="code-block">
+                <button class="copy-btn" onclick="copyToClipboard('backendExample', this)">Copy</button>
+                <pre id="backendExample">// Server-side token generation (recommended for production)
+const crypto = require('crypto');
+
+function generateGuacamoleToken(tokenObj) {
+  const KEY = Buffer.from('MySuperSecretKeyForParamsToken12');
+  const iv = crypto.randomBytes(16);
+  
+  const cipher = crypto.createCipheriv('aes-256-cbc', KEY, iv);
+  let encrypted = cipher.update(JSON.stringify(tokenObj), 'utf8', 'base64');
+  encrypted += cipher.final('base64');
+  
+  const token = Buffer.from(JSON.stringify({
+    iv: iv.toString('base64'),
+    value: encrypted
+  })).toString('base64');
+  
+  return token;
+}
+
+// API endpoint to generate connection URL
+app.post('/api/remote-desktop/connect', async (req, res) => {
+  const { serverId } = req.body;
+  
+  // Fetch server credentials from your database
+  const server = await db.getServer(serverId);
+  
+  const tokenObj = {
+    connection: {
+      type: "rdp",
+      guacdHost: "guacd-1",
+      guacdPort: 4822,
+      settings: {
+        hostname: server.hostname,
+        username: server.username,
+        password: server.password,
+        "ignore-cert": true,
+        "security": "any"
+      }
+    }
+  };
+  
+  const token = generateGuacamoleToken(tokenObj);
+  const url = `https://guacamole.yourcompany.com/autoconnect.html?token=${encodeURIComponent(token)}`;
+  
+  res.json({ success: true, url });
+});</pre>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * COPY THIS FUNCTION TO YOUR PROJECT
+         * Generates an encrypted token for Guacamole connections
+         */
+        async function generateGuacamoleToken(tokenObj) {
+            /* ------------ Token generation with AES-256-CBC encryption --- */
+            const CIPHER = 'AES-256-CBC';
+            const KEY = new TextEncoder().encode('MySuperSecretKeyForParamsToken12');
+
+            const iv   = crypto.getRandomValues(new Uint8Array(16));
+            const algo = { name: "AES-CBC", iv };
+            const key  = await crypto.subtle.importKey("raw", KEY, algo, false, ["encrypt"]);
+            const ct   = new Uint8Array(await crypto.subtle.encrypt(algo, key,
+                                new TextEncoder().encode(JSON.stringify(tokenObj))));
+
+            const token = btoa(JSON.stringify({
+                iv:    btoa(String.fromCharCode(...iv)),
+                value: btoa(String.fromCharCode(...ct))
+            }));
+
+            return token;
+        }
+
+        /**
+         * Build token object from form inputs
+         */
+        function buildTokenObject() {
+            const protocol = document.getElementById('protocol').value;
+            const hostname = document.getElementById('hostname').value;
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const guacd = document.getElementById('guacd').value;
+            
+            const [guacdHost, guacdPort] = guacd.split(':');
+
+            const tokenObj = {
+                connection: {
+                    type: protocol,
+                    guacdHost: guacdHost,
+                    guacdPort: parseInt(guacdPort),
+                    settings: {
+                        hostname: hostname,
+                        username: username,
+                        password: password,
+                        "ignore-cert": true,
+                        "security": "any",
+                        "enable-drive": true,
+                        "drive-path": "/tmp/guac-drive",
+                        "create-drive-path": true,
+                        "enable-printing": true,
+                        "audio": ["audio/L16;rate=44100"]
+                    }
+                }
+            };
+
+            return tokenObj;
+        }
+
+        /**
+         * Generate token and show output (without connecting)
+         */
+        async function generateTokenOnly() {
+            try {
+                const tokenObj = buildTokenObject();
+                const token = await generateGuacamoleToken(tokenObj);
+                
+                displayOutput(token, tokenObj);
+            } catch (error) {
+                alert('Error generating token: ' + error.message);
+                console.error(error);
+            }
+        }
+
+        /**
+         * Display generated token and related information
+         */
+        function displayOutput(token, tokenObj) {
+            const outputSection = document.getElementById('outputSection');
+            const baseUrl = window.location.origin + '/../guacamole-lite-client/html/autoconnect.html';
+            const fullUrl = `${baseUrl}?token=${encodeURIComponent(token)}`;
+
+            document.getElementById('generatedToken').textContent = token;
+            document.getElementById('generatedUrl').textContent = fullUrl;
+            document.getElementById('tokenObject').textContent = JSON.stringify(tokenObj, null, 2);
+
+            outputSection.classList.remove('hidden');
+            outputSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        /**
+         * Copy text to clipboard
+         */
+        function copyToClipboard(elementId, button) {
+            const element = document.getElementById(elementId);
+            const text = element.textContent;
+
+            navigator.clipboard.writeText(text).then(() => {
+                const originalText = button.textContent;
+                button.textContent = 'Copied!';
+                button.classList.add('copied');
+                
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.classList.remove('copied');
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                alert('Failed to copy to clipboard');
+            });
+        }
+
+        /**
+         * Form submit handler - Generate token and connect
+         */
+        document.getElementById('connectionForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            try {
+                const tokenObj = buildTokenObject();
+                const token = await generateGuacamoleToken(tokenObj);
+                
+                // Display the output first
+                displayOutput(token, tokenObj);
+
+                // Build the connection URL
+                const baseUrl = window.location.origin + '/../guacamole-lite-client/html/autoconnect.html';
+                const url = `${baseUrl}?token=${encodeURIComponent(token)}`;
+
+                // Confirm before redirecting
+                if (confirm('Token generated! Click OK to connect to the remote desktop, or Cancel to stay on this page.')) {
+                    window.location.href = url;
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+                console.error(error);
+            }
+        });
+    </script>
+</body>
+</html>

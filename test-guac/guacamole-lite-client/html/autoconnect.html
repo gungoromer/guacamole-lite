@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Auto Connect RDP</title>
+  
+  <!-- Aynı CSS ve JS dosyalarını yükliyoruz -->
+  <link rel="stylesheet" href="css/style.css" />
+  
+</head>
+<body>
+
+<!-- Hidden fields required by main.js (to prevent errors) -->
+<input type="hidden" id="protocol" value="rdp" />
+<input type="hidden" id="connect-target" value="remote-host" />
+<input type="hidden" id="remote-hostname" />
+<input type="hidden" id="remote-username" />
+<input type="hidden" id="remote-password" />
+<div id="join-connection-details" style="display: none;"></div>
+<div id="remote-host-details" style="display: none;"></div>
+
+<!-- Display Screen -->
+<div id="display-screen">
+    <div id="display-header">
+        <div id="display-title">Remote Connection</div>
+        <div id="display-info">
+            <span id="display-guacd" title="guacd instance handling this connection"></span>
+            <span id="display-uuid" title="Click to copy Connection ID"></span>
+        </div>
+        <button id="close-button">Disconnect</button>
+    </div>
+    <!-- The remote-desktop surface -->
+    <div id="display"></div>
+</div>
+
+<textarea
+  id="clipboard-textarea"
+  style="position: absolute; left: -9999px"
+></textarea>
+
+<script src="js/all.min.js"></script>
+<script src="js/token-generator.js"></script>
+<script src="js/main.js"></script>
+
+<script>
+  // -------------------------
+  // Querystring parse
+  // -------------------------
+  function qs(name) {
+    const params = new URLSearchParams(window.location.search);
+    return params.get(name);
+  }
+
+  // Check if encrypted token is provided
+  const encryptedToken = qs("token");
+  const guacd = qs("guacd") || "guacd-1:4822";
+  const protocol = qs("protocol") || "rdp";
+
+  // Connect immediately
+  (async () => {
+    const displayTitle = document.getElementById("display-title");
+    let token;
+    let connectionInfo = null;
+
+    try {
+      if (encryptedToken) {
+        // -------------------------
+        // Token-based authentication (SECURE)
+        // -------------------------
+        console.log("Using encrypted token for authentication");
+        token = encryptedToken;
+        displayTitle.textContent = `Connecting with encrypted token...`;
+        
+        // Set generic connection info for encrypted tokens
+        connectionInfo = { hostname: "Secure Connection" };
+      } else {
+        // -------------------------
+        // Fallback: Plain querystring parameters (INSECURE)
+        // -------------------------
+        console.warn("Using plain querystring parameters - NOT RECOMMENDED for production");
+        
+        const host = qs("host");
+        const user = qs("user");
+        const pass = qs("pass");
+
+        // Validate
+        if (!host || !user || !pass) {
+          alert("Missing parameters. Required: token OR (host, user, pass)");
+          throw new Error("Missing authentication parameters");
+        }
+
+        // Build token object (same format as main.js)
+        const [guacdHost, guacdPort] = guacd.split(":");
+
+        const tokenObj = {
+          connection: {
+            type: protocol,
+            guacdHost: guacdHost,
+            guacdPort: parseInt(guacdPort),
+            settings: {
+              hostname: host,
+              username: user,
+              password: pass,
+
+              "ignore-cert": true,
+              security: "any",
+              "enable-drive": true,
+              "drive-path": "/tmp/guac-drive",
+              "create-drive-path": true,
+              "enable-printing": true,
+              audio: ["audio/L16;rate=44100"],
+            },
+          },
+        };
+
+        displayTitle.textContent = `Connecting to ${host} (${protocol.toUpperCase()})`;
+        token = await generateGuacamoleToken(tokenObj);
+        
+        // Set connection info for plain parameters
+        connectionInfo = { hostname: host };
+      }
+
+      // Initialize connection with the token
+      initializeGuacamoleClient(token, protocol, guacd, connectionInfo);
+    } catch (e) {
+      alert("Connection failed: " + e.message);
+      console.error("Connection error:", e);
+    }
+  })();
+</script>
+
+</body>
+</html>

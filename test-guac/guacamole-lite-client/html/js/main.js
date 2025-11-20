@@ -29,44 +29,52 @@ function getSelectedRadioValue(name) {
 
 // Centralised form visibility handler ----------------------------------
 function updateFormVisibility() {
-    const mode = getSelectedRadioValue('connection-type');
-
-    if (!mode) {
-        // Nothing selected – hide everything except connection-type row
-        document.getElementById('connect-target').closest('.form-row').style.display = 'none';
-        document.getElementById('protocol').closest('.form-row').style.display = 'none';
-        guacdSelection.closest('.form-row').style.display = 'none';
-        remoteHostDetailsDiv.classList.remove('visible');
-        joinConnectionDetailsDiv.classList.remove('visible');
-        joinConnectionDetailsDiv.hidden = true;
-        return;
-    }
-
-    if (mode === 'join') {
-        // Hide everything related to new connections
-        document.getElementById('connect-target').closest('.form-row').style.display = 'none';
-        document.getElementById('protocol').closest('.form-row').style.display = 'none';
-        guacdSelection.closest('.form-row').style.display = 'none';
-        remoteHostDetailsDiv.classList.remove('visible');
-
-        // Show join-specific section
-        joinConnectionDetailsDiv.classList.add('visible');
-        joinConnectionDetailsDiv.hidden = false;
+    console.log(window.location.pathname);
+    if (window.location.pathname.includes("autoconnect")) {
+        console.warn("AutoConnect mode: form UI skipped");
     } else {
-        // Show new-connection inputs
-        document.getElementById('connect-target').closest('.form-row').style.display = '';
-        document.getElementById('protocol').closest('.form-row').style.display = '';
-        guacdSelection.closest('.form-row').style.display = '';
-        joinConnectionDetailsDiv.classList.remove('visible');
-        joinConnectionDetailsDiv.hidden = true;
+        // eski kod burada çalışmaya devam eder
 
-        // Show remote host details only when "Remote Host" is chosen
-        if (getSelectedRadioValue('connect-target') === 'remote-host') {
-            remoteHostDetailsDiv.classList.add('visible');
-            remoteHostDetailsDiv.hidden = false;
-        } else {
+
+        const mode = getSelectedRadioValue('connection-type');
+
+        if (!mode) {
+            // Nothing selected – hide everything except connection-type row
+            document.getElementById('connect-target').closest('.form-row').style.display = 'none';
+            document.getElementById('protocol').closest('.form-row').style.display = 'none';
+            guacdSelection.closest('.form-row').style.display = 'none';
             remoteHostDetailsDiv.classList.remove('visible');
-            remoteHostDetailsDiv.hidden = true;
+            joinConnectionDetailsDiv.classList.remove('visible');
+            joinConnectionDetailsDiv.hidden = true;
+            return;
+        }
+
+        if (mode === 'join') {
+            // Hide everything related to new connections
+            document.getElementById('connect-target').closest('.form-row').style.display = 'none';
+            document.getElementById('protocol').closest('.form-row').style.display = 'none';
+            guacdSelection.closest('.form-row').style.display = 'none';
+            remoteHostDetailsDiv.classList.remove('visible');
+
+            // Show join-specific section
+            joinConnectionDetailsDiv.classList.add('visible');
+            joinConnectionDetailsDiv.hidden = false;
+        } else {
+            // Show new-connection inputs
+            document.getElementById('connect-target').closest('.form-row').style.display = '';
+            document.getElementById('protocol').closest('.form-row').style.display = '';
+            guacdSelection.closest('.form-row').style.display = '';
+            joinConnectionDetailsDiv.classList.remove('visible');
+            joinConnectionDetailsDiv.hidden = true;
+
+            // Show remote host details only when "Remote Host" is chosen
+            if (getSelectedRadioValue('connect-target') === 'remote-host') {
+                remoteHostDetailsDiv.classList.add('visible');
+                remoteHostDetailsDiv.hidden = false;
+            } else {
+                remoteHostDetailsDiv.classList.remove('visible');
+                remoteHostDetailsDiv.hidden = true;
+            }
         }
     }
 }
@@ -187,10 +195,17 @@ connectButton.addEventListener('click', async () => {
 });
 
 // Function to initialize Guacamole client
-function initializeGuacamoleClient(token, protocol, selectedGuacd) {
-    // Switch to display screen before initializing to avoid UI jumping
-    connectionScreen.style.display = 'none';
-    displayScreen.style.display = 'flex';
+function initializeGuacamoleClient(token, protocol, selectedGuacd, connectionInfo = null) {
+    console.log(window.location.pathname);
+    if (window.location.pathname.includes("autoconnect")) {
+        console.warn("AutoConnect mode: form UI skipped");
+        displayScreen.style.display = 'flex';
+    } else {
+        // eski kod burada çalışmaya devam eder
+        // Switch to display screen before initializing to avoid UI jumping
+        connectionScreen.style.display = 'none';
+        displayScreen.style.display = 'flex';
+    }
 
     // Update display title with connection info
     const displayTitle = document.getElementById('display-title');
@@ -199,6 +214,10 @@ function initializeGuacamoleClient(token, protocol, selectedGuacd) {
         const readOnly = readOnlyCheckbox.checked ? ' (read-only)' : '';
         displayTitle.textContent = `Joined connection: ${connectionId}${readOnly}`;
         displayGuacd.textContent = 'guacd: Auto-routed';
+    } else if (connectionInfo) {
+        // Use provided connection info (for autoconnect mode with encrypted token)
+        displayTitle.textContent = `Connected to: ${connectionInfo.hostname || 'Remote Server'} (${protocol.toUpperCase()})`;
+        displayGuacd.textContent = `guacd: ${selectedGuacd}`;
     } else {
         const target = getSelectedRadioValue('connect-target');
         displayTitle.textContent = `Connected to: ${target === 'test-host' ? 'Test Host' : remoteHostnameInput.value} (${protocol.toUpperCase()})`;
@@ -349,11 +368,13 @@ function initializeGuacamoleClient(token, protocol, selectedGuacd) {
 
 // Close button click handler
 closeButton.addEventListener('click', () => {
+    console.log("Closing connection...");
     cleanupGuacamole();
 
     // Switch back to connection screen
     displayScreen.style.display = 'none';
     connectionScreen.style.display = 'flex';
+
 });
 
 // Function to properly clean up all Guacamole resources
