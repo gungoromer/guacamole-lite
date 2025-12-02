@@ -431,30 +431,46 @@ function uploadFile(file) {
     console.log(`Starting upload: ${file.name} (${formatBytes(file.size)})`);
     showFileTransferNotification(`📤 Uploading: ${file.name}...`, 'info');
 
-    try {
-        // Create a file stream
-        const stream = currentClient.createFileStream(file.type || 'application/octet-stream', file.name);
+    const reader = new FileReader();
 
-        // Use BlobWriter to send the file
-        const writer = new Guacamole.BlobWriter(stream);
+    reader.onload = function (e) {
+        try {
+            const dataUrl = e.target.result;
+            // Extract Base64 data from Data URL
+            const base64 = dataUrl.split(',')[1];
 
-        writer.oncomplete = () => {
+            const stream = currentClient.createFileStream(file.type || 'application/octet-stream', file.name);
+
+            // Handle stream acknowledgment
+            stream.onack = function (status) {
+                if (status.isError()) {
+                    console.error(`Stream error: ${status.code}`);
+                    showFileTransferNotification(`❌ Upload error: ${status.code}`, 'error');
+                }
+            };
+
+            // Send the entire file as one blob (for now, simple implementation)
+            stream.sendBlob(base64);
+
+            // Close the stream
+            stream.sendEnd();
+
             console.log(`Upload complete: ${file.name}`);
             showFileTransferNotification(`✅ Uploaded: ${file.name}`, 'success');
-        };
 
-        writer.onerror = (error) => {
-            console.error(`Upload failed: ${file.name}`, error);
-            showFileTransferNotification(`❌ Upload failed: ${file.name}`, 'error');
-        };
+        } catch (error) {
+            console.error(`Error sending file: ${file.name}`, error);
+            showFileTransferNotification(`❌ Error: ${error.message}`, 'error');
+        }
+    };
 
-        // Send the file - sendEnd will be called automatically by BlobWriter
-        writer.sendBlob(file);
+    reader.onerror = function (error) {
+        console.error(`Error reading file: ${file.name}`, error);
+        showFileTransferNotification(`❌ Read error: ${file.name}`, 'error');
+    };
 
-    } catch (error) {
-        console.error(`Error uploading file: ${file.name}`, error);
-        showFileTransferNotification(`❌ Error: ${error.message}`, 'error');
-    }
+    // Read file as Data URL (Base64)
+    reader.readAsDataURL(file);
 }
 
 // Show file transfer notification
