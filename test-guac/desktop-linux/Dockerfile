@@ -14,6 +14,8 @@ RUN apt-get update && \
         xterm x11-apps                      \
         x11vnc xvfb                         \
         sudo                                \
+        libfuse2                            \
+        inotify-tools                       \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # -------------------------------------------------

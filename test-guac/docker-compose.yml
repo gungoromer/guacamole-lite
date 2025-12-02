@@ -5,18 +5,24 @@ services:
     container_name: guacd-1
     restart: unless-stopped
     expose: [ "4822" ]
+    volumes:
+      - guac-uploads:/tmp/guac-drive
 
   guacd-2:
     image: guacamole/guacd:1.5.5
     container_name: guacd-2
     restart: unless-stopped
     expose: [ "4822" ]
+    volumes:
+      - guac-uploads:/tmp/guac-drive
 
   guacd-3:
     image: guacamole/guacd:1.5.5
     container_name: guacd-3
     restart: unless-stopped
     expose: [ "4822" ]
+    volumes:
+      - guac-uploads:/tmp/guac-drive
 
   # Test desktop for connections
   desktop-linux:
@@ -26,6 +32,8 @@ services:
     expose:
       - "3389"  # RDP Port
       - "5900"  # VNC Port
+    volumes:
+      - guac-uploads:/mnt/guac-uploads
 
   # guacamole-lite server
   guacamole-lite-server:
@@ -71,3 +79,6 @@ services:
     volumes:
       - ./external-requester:/usr/share/nginx/html:ro
     ports: [ "9095:80" ]
+
+volumes:
+  guac-uploads:

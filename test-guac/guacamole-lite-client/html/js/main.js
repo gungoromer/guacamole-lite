@@ -137,6 +137,7 @@ connectButton.addEventListener('click', async () => {
                 "ignore-cert": true,
                 "security": "any",
                 "enable-drive": true,
+                "drive-name": "GuacamoleShare",
                 "drive-path": "/tmp/guac-drive",
                 "create-drive-path": true,
                 "enable-printing": true,
@@ -266,6 +267,7 @@ function initializeGuacamoleClient(token, protocol, selectedGuacd, connectionInf
 
         // Set up clipboard handler
         client.onclipboard = (stream, mimetype) => {
+            console.log("Clipboard data received: " + mimetype);
             let data = '';
             const reader = new Guacamole.StringReader(stream);
             reader.ontext = text => data += text;
@@ -291,6 +293,7 @@ function initializeGuacamoleClient(token, protocol, selectedGuacd, connectionInf
 
         // Set up file download handler
         client.onfile = (stream, mimetype, filename) => {
+            console.log("File download started: " + filename);
             stream.sendAck("Ready", Guacamole.Status.Code.SUCCESS);
 
             const reader = new Guacamole.BlobReader(stream, mimetype);
@@ -300,6 +303,7 @@ function initializeGuacamoleClient(token, protocol, selectedGuacd, connectionInf
             };
 
             reader.onend = () => {
+                console.log("File download complete: " + filename);
                 // Automatically create a link and download the file
                 const file = reader.getBlob();
                 const url = URL.createObjectURL(file);
@@ -323,12 +327,19 @@ function initializeGuacamoleClient(token, protocol, selectedGuacd, connectionInf
 
         // Set up keyboard
         const keyboard = new Guacamole.Keyboard(window);
-        keyboard.onkeydown = keysym => client.sendKeyEvent(1, keysym);
-        keyboard.onkeyup = keysym => client.sendKeyEvent(0, keysym);
+        keyboard.onkeydown = keysym => {
+            console.log(`Key down: ${keysym}`);
+            client.sendKeyEvent(1, keysym);
+        };
+        keyboard.onkeyup = keysym => {
+            console.log(`Key up: ${keysym}`);
+            client.sendKeyEvent(0, keysym);
+        };
         currentKeyboard = keyboard;
 
         // Set up paste event listener
         pasteEventListener = (event) => {
+            console.log("Paste event detected");
             const text = event.clipboardData.getData('text/plain');
             if (text && currentClient) {
                 event.preventDefault(); // Prevent default paste behavior in browser
@@ -376,6 +387,101 @@ closeButton.addEventListener('click', () => {
     connectionScreen.style.display = 'flex';
 
 });
+
+// File upload functionality
+const uploadButton = document.getElementById('upload-file-button');
+const fileInput = document.getElementById('file-upload-input');
+const fileTransferStatus = document.getElementById('file-transfer-status');
+
+// Show file picker when upload button is clicked
+if (uploadButton) {
+    uploadButton.addEventListener('click', () => {
+        if (!currentClient) {
+            showFileTransferNotification('⚠️ No active connection', 'error');
+            return;
+        }
+        fileInput.click();
+    });
+}
+
+// Handle file selection
+if (fileInput) {
+    fileInput.addEventListener('change', (e) => {
+        const files = Array.from(e.target.files);
+        if (files.length > 0 && currentClient) {
+            uploadFiles(files);
+        }
+        // Reset input so same file can be uploaded again
+        fileInput.value = '';
+    });
+}
+
+// Upload files to remote server
+function uploadFiles(files) {
+    console.log(`Uploading ${files.length} file(s)...`);
+
+    files.forEach((file, index) => {
+        setTimeout(() => {
+            uploadFile(file);
+        }, index * 100); // Stagger uploads slightly
+    });
+}
+
+function uploadFile(file) {
+    console.log(`Starting upload: ${file.name} (${formatBytes(file.size)})`);
+    showFileTransferNotification(`📤 Uploading: ${file.name}...`, 'info');
+
+    try {
+        // Create a file stream
+        const stream = currentClient.createFileStream(file.type || 'application/octet-stream', file.name);
+
+        // Use BlobWriter to send the file
+        const writer = new Guacamole.BlobWriter(stream);
+
+        writer.oncomplete = () => {
+            console.log(`Upload complete: ${file.name}`);
+            showFileTransferNotification(`✅ Uploaded: ${file.name}`, 'success');
+        };
+
+        writer.onerror = (error) => {
+            console.error(`Upload failed: ${file.name}`, error);
+            showFileTransferNotification(`❌ Upload failed: ${file.name}`, 'error');
+        };
+
+        // Send the file - sendEnd will be called automatically by BlobWriter
+        writer.sendBlob(file);
+
+    } catch (error) {
+        console.error(`Error uploading file: ${file.name}`, error);
+        showFileTransferNotification(`❌ Error: ${error.message}`, 'error');
+    }
+}
+
+// Show file transfer notification
+function showFileTransferNotification(message, type = 'info') {
+    if (!fileTransferStatus) return;
+
+    fileTransferStatus.textContent = message;
+    fileTransferStatus.className = `file-transfer-${type}`;
+    fileTransferStatus.style.display = 'block';
+
+    // Auto-hide after 3 seconds for success/error messages
+    if (type === 'success' || type === 'error') {
+        setTimeout(() => {
+            fileTransferStatus.style.display = 'none';
+        }, 3000);
+    }
+}
+
+// Format bytes to human-readable format
+function formatBytes(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+}
+
 
 // Function to properly clean up all Guacamole resources
 function cleanupGuacamole() {

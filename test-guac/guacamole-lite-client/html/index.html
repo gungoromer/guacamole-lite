@@ -117,8 +117,14 @@
                 <span id="display-guacd" title="guacd instance handling this connection"></span>
                 <span id="display-uuid" title="Click to copy Connection ID"></span>
             </div>
+            <div id="file-transfer-controls">
+                <input type="file" id="file-upload-input" style="display: none;" multiple>
+                <button id="upload-file-button" title="Upload files to remote server">📤 Upload</button>
+            </div>
             <button id="close-button">Disconnect</button>
         </div>
+        <!-- File transfer status notification -->
+        <div id="file-transfer-status" style="display: none;"></div>
         <!-- The remote-desktop surface -->
         <div id="display"></div>
     </div>

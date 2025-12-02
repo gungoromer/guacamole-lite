@@ -229,3 +229,56 @@ button:hover {
     cursor: pointer;
     font-weight: normal;
 }
+
+/* File transfer controls */
+#file-transfer-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+#upload-file-button {
+    padding: 8px 15px;
+    background-color: #34a853;
+    font-size: 14px;
+}
+
+#upload-file-button:hover {
+    background-color: #2d8e47;
+}
+
+/* File transfer status notification */
+#file-transfer-status {
+    padding: 10px 15px;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 500;
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.file-transfer-info {
+    background-color: #2196f3;
+    color: white;
+}
+
+.file-transfer-success {
+    background-color: #4caf50;
+    color: white;
+}
+
+.file-transfer-error {
+    background-color: #f44336;
+    color: white;
+}
