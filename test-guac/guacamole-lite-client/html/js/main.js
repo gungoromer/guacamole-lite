@@ -292,6 +292,7 @@ function initializeGuacamoleClient(token, protocol, selectedGuacd, connectionInf
         };
 
         // Set up file download handler
+        // Set up file download handler
         client.onfile = (stream, mimetype, filename) => {
             console.log("File download started: " + filename);
             stream.sendAck("Ready", Guacamole.Status.Code.SUCCESS);
@@ -304,6 +305,24 @@ function initializeGuacamoleClient(token, protocol, selectedGuacd, connectionInf
 
             reader.onend = () => {
                 console.log("File download complete: " + filename);
+
+                // Intercept file list
+                if (filename === 'file-list.json') {
+                    const blob = reader.getBlob();
+                    const fileReader = new FileReader();
+                    fileReader.onload = (e) => {
+                        try {
+                            const json = JSON.parse(e.target.result);
+                            updateFileListUI(json);
+                        } catch (err) {
+                            console.error("Error parsing file list:", err);
+                            fileListContainer.innerHTML = '<div class="error-message">Error loading file list</div>';
+                        }
+                    };
+                    fileReader.readAsText(blob);
+                    return;
+                }
+
                 // Automatically create a link and download the file
                 const file = reader.getBlob();
                 const url = URL.createObjectURL(file);
@@ -343,15 +362,78 @@ function initializeGuacamoleClient(token, protocol, selectedGuacd, connectionInf
             const text = event.clipboardData.getData('text/plain');
             if (text && currentClient) {
                 event.preventDefault(); // Prevent default paste behavior in browser
-                // Send clipboard data to the remote session
-                const stream = currentClient.createClipboardStream('text/plain');
-                const writer = new Guacamole.StringWriter(stream);
-                writer.sendText(text);
-                writer.sendEnd();
-                console.log("Sent clipboard data to remote:", text);
+                sendTextToRemote(text);
             }
         };
         window.addEventListener('paste', pasteEventListener);
+
+        // Helper to send text to remote
+        function sendTextToRemote(text) {
+            // Send clipboard data to the remote session
+            const stream = currentClient.createClipboardStream('text/plain');
+            const writer = new Guacamole.StringWriter(stream);
+            writer.sendText(text);
+            writer.sendEnd();
+            console.log("Sent clipboard data to remote:", text);
+        }
+
+        // --- Clipboard Sync Logic ---
+        const sendClipboardButton = document.getElementById('send-clipboard-button');
+
+        // 1. Button Click Handler
+        if (sendClipboardButton) {
+            sendClipboardButton.addEventListener('click', async () => {
+                await sendClipboardToRemote();
+            });
+        }
+
+        // 2. Focus Handler (Auto-sync attempt)
+        window.addEventListener('focus', async () => {
+            // Optional: Check if we should auto-sync. For now, we try.
+            // Note: This might fail if the user hasn't interacted with the document recently
+            // or if permission is denied.
+            try {
+                // We don't want to be too aggressive with alerts on focus, so we might just log errors
+                const text = await navigator.clipboard.readText();
+                if (text) {
+                    console.log("Auto-syncing clipboard on focus...");
+                    sendTextToRemote(text);
+                }
+            } catch (err) {
+                // Expected error if document is not focused or permission denied
+                console.log("Auto-sync clipboard failed (expected if no permission):", err);
+            }
+        });
+
+        // Core function to read local clipboard and send to remote
+        async function sendClipboardToRemote() {
+            if (!currentClient) {
+                alert("No active connection");
+                return;
+            }
+
+            try {
+                const text = await navigator.clipboard.readText();
+                if (text) {
+                    sendTextToRemote(text);
+
+                    // Visual feedback on the button
+                    const originalText = sendClipboardButton.textContent;
+                    sendClipboardButton.textContent = "✅ Sent!";
+                    setTimeout(() => {
+                        sendClipboardButton.textContent = originalText;
+                    }, 1000);
+
+                    // Return focus to display so user can paste immediately
+                    client.getDisplay().getElement().focus();
+                } else {
+                    console.log("Clipboard is empty");
+                }
+            } catch (err) {
+                console.error("Failed to read clipboard:", err);
+                alert("Failed to read clipboard. Please allow clipboard access for this site.\n\nError: " + err.message);
+            }
+        }
 
         // Connect to the remote desktop
         // Construct connection string, adding audio only if RDP
@@ -427,9 +509,109 @@ function uploadFiles(files) {
     });
 }
 
-function uploadFile(file) {
-    console.log(`Starting upload: ${file.name} (${formatBytes(file.size)})`);
-    showFileTransferNotification(`📤 Uploading: ${file.name}...`, 'info');
+// Handle page unloads to clean up any active sessions
+window.addEventListener('beforeunload', () => {
+    cleanupGuacamole();
+});
+
+// --- Remote File Browser Logic ---
+
+const remoteFilesButton = document.getElementById('remote-files-button');
+const fileBrowserModal = document.getElementById('file-browser-modal');
+const closeModalButton = document.querySelector('.close-modal');
+const refreshFilesButton = document.getElementById('refresh-files-button');
+const fileListContainer = document.getElementById('file-list-container');
+
+// Open modal and request files
+if (remoteFilesButton) {
+    remoteFilesButton.addEventListener('click', () => {
+        if (!currentClient) {
+            showFileTransferNotification('⚠️ No active connection', 'error');
+            return;
+        }
+        fileBrowserModal.classList.add('visible');
+        requestFileList();
+    });
+}
+
+// Close modal
+if (closeModalButton) {
+    closeModalButton.addEventListener('click', () => {
+        fileBrowserModal.classList.remove('visible');
+    });
+}
+
+// Close modal when clicking outside
+window.addEventListener('click', (e) => {
+    if (e.target === fileBrowserModal) {
+        fileBrowserModal.classList.remove('visible');
+    }
+});
+
+// Refresh files
+if (refreshFilesButton) {
+    refreshFilesButton.addEventListener('click', () => {
+        requestFileList();
+    });
+}
+
+// Request file list by uploading CMD_LIST.txt
+function requestFileList() {
+    if (!currentClient) return;
+
+    fileListContainer.innerHTML = '<div class="loading-spinner">Loading files...</div>';
+
+    // Create empty CMD_LIST.txt
+    const file = new File([""], "CMD_LIST.txt", { type: "text/plain" });
+    uploadFile(file, true); // true = silent upload (no notification)
+}
+
+// Request file download by uploading CMD_DOWNLOAD.txt
+function requestFileDownload(filename) {
+    if (!currentClient) return;
+
+    showFileTransferNotification(`Requesting: ${filename}...`, 'info');
+
+    // Create CMD_DOWNLOAD.txt with filename
+    const file = new File([filename], "CMD_DOWNLOAD.txt", { type: "text/plain" });
+    uploadFile(file, true);
+}
+
+// Update UI with file list
+function updateFileListUI(files) {
+    fileListContainer.innerHTML = '';
+
+    if (!files || files.length === 0) {
+        fileListContainer.innerHTML = '<div class="empty-message">No files found on Desktop</div>';
+        return;
+    }
+
+    files.forEach(file => {
+        const item = document.createElement('div');
+        item.className = 'file-item';
+        item.innerHTML = `
+            <div class="file-name">
+                <span>📄</span> ${file.Name}
+            </div>
+            <div class="file-info">
+                ${formatBytes(file.Length)} • ${new Date(file.LastWriteTime).toLocaleDateString()}
+            </div>
+        `;
+
+        item.addEventListener('click', () => {
+            requestFileDownload(file.Name);
+        });
+
+        fileListContainer.appendChild(item);
+    });
+}
+
+// Modified uploadFile to support silent mode
+function uploadFile(file, silent = false) {
+    if (!silent) {
+        console.log(`Starting upload: ${file.name} (${formatBytes(file.size)})`);
+        showFileTransferNotification(`📤 Uploading: ${file.name}...`, 'info');
+    }
 
     const reader = new FileReader();
 
@@ -445,28 +627,30 @@ function uploadFile(file) {
             stream.onack = function (status) {
                 if (status.isError()) {
                     console.error(`Stream error: ${status.code}`);
-                    showFileTransferNotification(`❌ Upload error: ${status.code}`, 'error');
+                    if (!silent) showFileTransferNotification(`❌ Upload error: ${status.code}`, 'error');
                 }
             };
 
-            // Send the entire file as one blob (for now, simple implementation)
+            // Send the entire file as one blob
             stream.sendBlob(base64);
 
             // Close the stream
             stream.sendEnd();
 
-            console.log(`Upload complete: ${file.name}`);
-            showFileTransferNotification(`✅ Uploaded: ${file.name}`, 'success');
+            if (!silent) {
+                console.log(`Upload complete: ${file.name}`);
+                showFileTransferNotification(`✅ Uploaded: ${file.name}`, 'success');
+            }
 
         } catch (error) {
             console.error(`Error sending file: ${file.name}`, error);
-            showFileTransferNotification(`❌ Error: ${error.message}`, 'error');
+            if (!silent) showFileTransferNotification(`❌ Error: ${error.message}`, 'error');
         }
     };
 
     reader.onerror = function (error) {
         console.error(`Error reading file: ${file.name}`, error);
-        showFileTransferNotification(`❌ Read error: ${file.name}`, 'error');
+        if (!silent) showFileTransferNotification(`❌ Read error: ${file.name}`, 'error');
     };
 
     // Read file as Data URL (Base64)

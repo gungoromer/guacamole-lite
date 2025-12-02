@@ -120,6 +120,8 @@
             <div id="file-transfer-controls">
                 <input type="file" id="file-upload-input" style="display: none;" multiple>
                 <button id="upload-file-button" title="Upload files to remote server">📤 Upload</button>
+                <button id="send-clipboard-button" title="Send local clipboard to remote">📋 Send Clipboard</button>
+                <button id="remote-files-button" title="Browse remote files">📂 Remote Files</button>
             </div>
             <button id="close-button">Disconnect</button>
         </div>
@@ -127,6 +129,24 @@
         <div id="file-transfer-status" style="display: none;"></div>
         <!-- The remote-desktop surface -->
         <div id="display"></div>
+    </div>
+
+    <!-- File Browser Modal -->
+    <div id="file-browser-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Remote Files (Desktop)</h3>
+                <span class="close-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="file-list-container">
+                    <div class="loading-spinner">Loading files...</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="refresh-files-button">Refresh</button>
+            </div>
+        </div>
     </div>
 </div>
 
